@@ -9,7 +9,9 @@ const DEFAULT_API_BASE_URL = 'http://localhost:8001'
 const API_PREFIX = '/api/v1'
 
 // Remove every trailing slash so the base URL never produces "//" when joined with an endpoint.
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '')
+// An empty VITE_API_BASE_URL means same origin (used behind the nginx proxy in Docker).
+const RAW_API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+const API_BASE_URL = (RAW_API_BASE_URL === undefined ? DEFAULT_API_BASE_URL : RAW_API_BASE_URL).replace(/\/+$/, '')
 
 const http = axios.create({
   baseURL: API_BASE_URL,
@@ -40,20 +42,34 @@ const FIELD_LABELS = {
   availability: 'Availability',
 }
 
-function describeValidationError(item) {
-  const field = Array.isArray(item.loc) ? item.loc[item.loc.length - 1] : undefined
-  const label = FIELD_LABELS[field] || field || 'Input'
-  if (item.type === 'string_pattern_mismatch') {
-    if (field?.includes('email')) return `${label} must be a valid email address.`
-    if (field === 'employee_name' || field === 'name') {
-      return `${label} may contain only letters, spaces, hyphens (-), apostrophes (') and periods (.).`
-    }
-    return `${label} may contain only letters, numbers, spaces and . , - ( ) / & ' #.`
-  }
-  if (item.type === 'string_too_short' || item.type === 'missing') {
+// Turns one DRF field message into a sentence that names the field.
+function describeFieldMessage(field, message) {
+  const label = FIELD_LABELS[field] || field
+  if (message.startsWith('Please ')) return message
+  if (message === 'This field is required.' || message === 'This field may not be blank.' || message === 'This field may not be null.') {
     return `${label} is required.`
   }
-  return `${label}: ${item.msg}`
+  const tooLong = message.match(/no more than (\d+) characters/)
+  if (tooLong) return `${label} must be ${tooLong[1]} characters or fewer.`
+  if (message.includes('valid email')) return `${label} must be a valid email address.`
+  if (/^[a-z]/.test(message)) return `${label} ${message}`
+  return `${label}: ${message}`
+}
+
+// DRF returns either {detail: "..."} (business rules, not found, conflicts) or {field: ["message", ...]} (validation).
+function describeErrorBody(data) {
+  if (typeof data?.detail === 'string') return data.detail
+  if (data && typeof data === 'object') {
+    const parts = []
+    for (const [field, messages] of Object.entries(data)) {
+      const list = Array.isArray(messages) ? messages : [messages]
+      for (const message of list) {
+        parts.push(describeFieldMessage(field === 'non_field_errors' ? '' : field, String(message)))
+      }
+    }
+    if (parts.length) return parts.join(' ')
+  }
+  return null
 }
 
 export class ApiError extends Error {
@@ -67,14 +83,8 @@ export class ApiError extends Error {
 function toApiError(error) {
   if (error.response) {
     const { status, data } = error.response
-    const detail = data?.detail
-    if (typeof detail === 'string') {
-      return new ApiError(detail, status)
-    }
-    if (Array.isArray(detail) && detail.length > 0) {
-      return new ApiError(detail.map(describeValidationError).join(' '), status)
-    }
-    return new ApiError(`The server returned an unexpected error (HTTP ${status}).`, status)
+    const message = describeErrorBody(data)
+    return new ApiError(message || `The server returned an unexpected error (HTTP ${status}).`, status)
   }
   if (error.request) {
     return new ApiError(

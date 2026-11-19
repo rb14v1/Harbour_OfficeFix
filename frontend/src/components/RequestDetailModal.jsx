@@ -3,14 +3,14 @@ import { CATEGORIES, PRIORITIES, STATUSES, updateRequest } from '../services/api
 import { formatDateTime } from '../services/format.js'
 import { LIMITS, checkEmail, checkName, checkText } from '../services/validation.js'
 import { PriorityBadge, StatusBadge } from './Badges.jsx'
-import CharCounter from './CharCounter.jsx'
+import FormField from './FormField.jsx'
 import Modal from './Modal.jsx'
 
 const TEXT_FIELDS = [
-  { key: 'employee_name', label: 'Employee name', max: 120 },
-  { key: 'employee_email', label: 'Employee email', max: 254 },
-  { key: 'title', label: 'Issue title', max: 200 },
-  { key: 'location', label: 'Location / floor', max: 200 },
+  { key: 'employee_name', label: 'Employee name', max: LIMITS.name, hint: 'Letters, spaces, hyphens, apostrophes and periods only.' },
+  { key: 'employee_email', label: 'Employee email', max: LIMITS.email },
+  { key: 'title', label: 'Issue title', max: LIMITS.title, hint: "Letters, numbers and . , - ( ) / & ' # only." },
+  { key: 'location', label: 'Location / floor', max: LIMITS.location, hint: "Letters, numbers and . , - ( ) / & ' # only." },
 ]
 
 function toFormState(request) {
@@ -36,7 +36,9 @@ function validate(form) {
     title: checkText(form.title, 'Issue title', LIMITS.title) || undefined,
     location: checkText(form.location, 'Location / floor', LIMITS.location) || undefined,
   }
-  if (form.category === 'Other') errors.category_other = checkText(form.category_other, 'Other category', LIMITS.categoryOther) || undefined
+  if (form.category === 'Other') {
+    errors.category_other = checkText(form.category_other, 'Other category', LIMITS.categoryOther) || undefined
+  }
   if (!form.description.trim()) errors.description = 'Description is required.'
   else if (form.description.length > LIMITS.description) errors.description = `Description must be ${LIMITS.description} characters or fewer.`
   if (form.resolution_notes.length > LIMITS.notes) errors.resolution_notes = `Resolution notes must be ${LIMITS.notes} characters or fewer.`
@@ -60,6 +62,8 @@ function buildChanges(request, form) {
   if (nextTechnician !== request.technician_id) changes.technician_id = nextTechnician
   return changes
 }
+
+const HINTS = Object.fromEntries(TEXT_FIELDS.map((field) => [field.key, field.hint]))
 
 export default function RequestDetailModal({ request, technicians, onClose, onSaved, onNotify, onRequestDelete }) {
   const [form, setForm] = useState(() => toFormState(request))
@@ -109,14 +113,14 @@ export default function RequestDetailModal({ request, technicians, onClose, onSa
 
   const footer = (
     <>
-      <button type="button" className="btn btn--ghost btn--danger-text" onClick={onRequestDelete} disabled={saving}>
+      <button type="button" className="btn btn-outline-danger" onClick={onRequestDelete} disabled={saving}>
         Delete request
       </button>
-      <div className="modal__footer-actions">
-        <button type="button" className="btn btn--ghost" onClick={onClose} disabled={saving}>
+      <div className="d-flex gap-2">
+        <button type="button" className="btn btn-outline-secondary" onClick={onClose} disabled={saving}>
           Close
         </button>
-        <button type="submit" form="request-detail-form" className="btn btn--primary" disabled={saving || !dirty}>
+        <button type="submit" form="request-detail-form" className="btn btn-primary" disabled={saving || !dirty}>
           {saving ? 'Saving...' : 'Save changes'}
         </button>
       </div>
@@ -124,18 +128,18 @@ export default function RequestDetailModal({ request, technicians, onClose, onSa
   )
 
   return (
-    <Modal title={`Request #${request.id}`} onClose={onClose} footer={footer} wide>
-      <div className="detail-summary">
+    <Modal title={`Request #${request.id}`} onClose={onClose} footer={footer} size="xl">
+      <div className="d-flex flex-wrap align-items-center gap-2 mb-3 pb-3 border-bottom">
         <StatusBadge status={request.status} />
         <PriorityBadge priority={request.priority} />
-        <span className="muted small">Submitted {formatDateTime(request.created_at)}</span>
-        {request.resolved_at && <span className="muted small">Resolved {formatDateTime(request.resolved_at)}</span>}
-        <span className="muted small">Last updated {formatDateTime(request.updated_at)}</span>
+        <span className="text-secondary small">Submitted {formatDateTime(request.created_at)}</span>
+        {request.resolved_at && <span className="text-secondary small">Resolved {formatDateTime(request.resolved_at)}</span>}
+        <span className="text-secondary small">Last updated {formatDateTime(request.updated_at)}</span>
       </div>
 
-      <form id="request-detail-form" className="form-grid" onSubmit={handleSubmit} noValidate>
+      <form id="request-detail-form" className="row g-3" onSubmit={handleSubmit} noValidate>
         {TEXT_FIELDS.map((field) => (
-          <Field
+          <FormField
             key={field.key}
             label={field.label}
             error={errors[field.key]}
@@ -144,46 +148,51 @@ export default function RequestDetailModal({ request, technicians, onClose, onSa
             max={field.max}
           >
             <input
-              className="input"
+              className={`form-control ${errors[field.key] ? 'is-invalid' : ''}`}
               value={form[field.key]}
               maxLength={field.max}
               onChange={(e) => update(field.key, e.target.value)}
             />
-          </Field>
+          </FormField>
         ))}
 
-        <Field label="Category" error={errors.category}>
-          <select className="input" value={form.category} onChange={(e) => update('category', e.target.value)}>
+        <FormField label="Category" error={errors.category}>
+          <select className="form-select" value={form.category} onChange={(e) => update('category', e.target.value)}>
             {CATEGORIES.map((category) => (
               <option key={category} value={category}>{category}</option>
             ))}
           </select>
-        </Field>
+        </FormField>
 
         {form.category === 'Other' && (
-          <Field label="Specify the category" error={errors.category_other} counter={form.category_other.length} max={LIMITS.categoryOther}>
-            <input className="input" value={form.category_other} maxLength={LIMITS.categoryOther} onChange={(e) => update('category_other', e.target.value)} />
-          </Field>
+          <FormField label="Specify the category" error={errors.category_other} counter={form.category_other.length} max={LIMITS.categoryOther}>
+            <input
+              className={`form-control ${errors.category_other ? 'is-invalid' : ''}`}
+              value={form.category_other}
+              maxLength={LIMITS.categoryOther}
+              onChange={(e) => update('category_other', e.target.value)}
+            />
+          </FormField>
         )}
 
-        <Field label="Priority" error={errors.priority}>
-          <select className="input" value={form.priority} onChange={(e) => update('priority', e.target.value)}>
+        <FormField label="Priority" error={errors.priority}>
+          <select className="form-select" value={form.priority} onChange={(e) => update('priority', e.target.value)}>
             {PRIORITIES.map((priority) => (
               <option key={priority} value={priority}>{priority}</option>
             ))}
           </select>
-        </Field>
+        </FormField>
 
-        <Field label="Status" error={errors.status}>
-          <select className="input" value={form.status} onChange={(e) => update('status', e.target.value)}>
+        <FormField label="Status" error={errors.status}>
+          <select className="form-select" value={form.status} onChange={(e) => update('status', e.target.value)}>
             {STATUSES.map((status) => (
               <option key={status} value={status}>{status}</option>
             ))}
           </select>
-        </Field>
+        </FormField>
 
-        <Field label="Assigned technician" error={errors.technician_id} hint="Only available technicians can be newly assigned.">
-          <select className="input" value={form.technician_id} onChange={(e) => update('technician_id', e.target.value)}>
+        <FormField label="Assigned technician" error={errors.technician_id} hint="Only available technicians can be newly assigned.">
+          <select className="form-select" value={form.technician_id} onChange={(e) => update('technician_id', e.target.value)}>
             <option value="">Unassigned</option>
             {technicianOptions.map((technician) => (
               <option key={technician.id} value={technician.id}>
@@ -192,55 +201,41 @@ export default function RequestDetailModal({ request, technicians, onClose, onSa
               </option>
             ))}
           </select>
-        </Field>
+        </FormField>
 
-        <Field label="Description" error={errors.description} full counter={form.description.length} max={LIMITS.description}>
+        <FormField label="Description" error={errors.description} full counter={form.description.length} max={LIMITS.description}>
           <textarea
-            className="input textarea"
+            className="form-control"
             rows={4}
             value={form.description}
             maxLength={LIMITS.description}
             onChange={(e) => update('description', e.target.value)}
           />
-        </Field>
+        </FormField>
 
-        <Field label="Resolution notes" error={errors.resolution_notes} full hint="Record what was done to fix the issue." counter={form.resolution_notes.length} max={LIMITS.notes}>
+        <FormField
+          label="Resolution notes"
+          error={errors.resolution_notes}
+          full
+          hint="Record what was done to fix the issue."
+          counter={form.resolution_notes.length}
+          max={LIMITS.notes}
+        >
           <textarea
-            className="input textarea"
+            className="form-control"
             rows={4}
             value={form.resolution_notes}
             maxLength={LIMITS.notes}
             onChange={(e) => update('resolution_notes', e.target.value)}
           />
-        </Field>
+        </FormField>
 
         {saveError && (
-          <div className="form-alert form-alert--error full" role="alert">
-            {saveError}
+          <div className="col-12">
+            <div className="alert alert-danger mb-0" role="alert">{saveError}</div>
           </div>
         )}
       </form>
     </Modal>
   )
-}
-
-function Field({ label, error, hint, full = false, counter, max, children }) {
-  return (
-    <label className={`field ${full ? 'field--full' : ''}`}>
-      <span className="field__label">{label}</span>
-      {children}
-      <span className="field__footer">
-        <span className="field__messages">
-          {error ? <span className="field__error">{error}</span> : hint && <span className="field__hint">{hint}</span>}
-        </span>
-        {max && <CharCounter length={counter} max={max} />}
-      </span>
-    </label>
-  )
-}
-
-const HINTS = {
-  employee_name: 'Letters, spaces, hyphens, apostrophes and periods only.',
-  title: 'Letters, numbers and . , - ( ) / & \' # only.',
-  location: 'Letters, numbers and . , - ( ) / & \' # only.',
 }

@@ -1,28 +1,32 @@
-const STATUS_CLASS = {
-  Open: 'badge--open',
-  'In Progress': 'badge--progress',
-  Resolved: 'badge--resolved',
+const STATUS_TONE = {
+  Open: 'text-bg-primary',
+  'In Progress': 'text-bg-warning',
+  Resolved: 'text-bg-success',
 }
 
-const PRIORITY_CLASS = {
-  Low: 'badge--low',
-  Medium: 'badge--medium',
-  High: 'badge--high',
+const PRIORITY_TONE = {
+  Low: 'text-bg-secondary',
+  Medium: 'text-bg-warning',
+  High: 'text-bg-danger',
 }
 
-const AVAILABILITY_CLASS = {
-  Available: 'badge--available',
-  Unavailable: 'badge--unavailable',
+const AVAILABILITY_TONE = {
+  Available: 'text-bg-success',
+  Unavailable: 'text-bg-secondary',
+}
+
+function Badge({ tone, children }) {
+  return <span className={`badge rounded-pill ${tone || 'text-bg-light'}`}>{children}</span>
 }
 
 export function StatusBadge({ status }) {
-  return <span className={`badge ${STATUS_CLASS[status] || ''}`}>{status}</span>
+  return <Badge tone={STATUS_TONE[status]}>{status}</Badge>
 }
 
 export function PriorityBadge({ priority }) {
-  return <span className={`badge ${PRIORITY_CLASS[priority] || ''}`}>{priority}</span>
+  return <Badge tone={PRIORITY_TONE[priority]}>{priority}</Badge>
 }
 
 export function AvailabilityBadge({ availability }) {
-  return <span className={`badge ${AVAILABILITY_CLASS[availability] || ''}`}>{availability}</span>
+  return <Badge tone={AVAILABILITY_TONE[availability]}>{availability}</Badge>
 }

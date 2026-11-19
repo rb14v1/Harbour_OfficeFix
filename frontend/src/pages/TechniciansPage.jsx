@@ -44,10 +44,6 @@ export default function TechniciansPage({ onNotify }) {
   }
 
   function handleSaved(saved, message) {
-    setTechnicians((current) => {
-      const exists = current.some((item) => item.id === saved.id)
-      return exists ? current.map((item) => (item.id === saved.id ? saved : item)) : [...current, saved]
-    })
     setEditing(null)
     setAdding(false)
     onNotify(message)
@@ -55,70 +51,72 @@ export default function TechniciansPage({ onNotify }) {
   }
 
   return (
-    <div className="stack">
-      <section className="card">
-        <header className="card__header">
+    <div className="d-flex flex-column gap-3">
+      <section className="card shadow-sm border-0">
+        <div className="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
           <div>
-            <h2>Maintenance team</h2>
-            <p className="muted small">Only technicians marked Available can be assigned to new requests.</p>
+            <h2 className="h6 mb-0">Maintenance team</h2>
+            <p className="small text-secondary mb-0">Only technicians marked Available can be assigned to new requests.</p>
           </div>
-          <button type="button" className="btn btn--primary" onClick={() => setAdding(true)}>
+          <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>
             Add technician
           </button>
-        </header>
+        </div>
 
-        {loading && technicians.length === 0 ? (
-          <LoadingState label="Loading technicians..." />
-        ) : error ? (
-          <ErrorState message={error} onRetry={load} />
-        ) : technicians.length === 0 ? (
-          <EmptyState message="No technicians yet. Add one to start assigning requests." />
-        ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Specialization</th>
-                  <th>Availability</th>
-                  <th className="num">Active requests</th>
-                  <th>Added</th>
-                  <th className="actions-col">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {technicians.map((technician) => (
-                  <tr key={technician.id}>
-                    <td className="strong">{technician.name}</td>
-                    <td>{technician.email}</td>
-                    <td>{technician.specialization}</td>
-                    <td><AvailabilityBadge availability={technician.availability} /></td>
-                    <td className="num">{technician.active_request_count}</td>
-                    <td className="nowrap">{formatDate(technician.created_at)}</td>
-                    <td className="actions-col">
-                      <button type="button" className="btn btn--ghost btn--small" onClick={() => setEditing(technician)}>
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn--ghost btn--small"
-                        onClick={() => toggleAvailability(technician)}
-                        disabled={togglingId === technician.id}
-                      >
-                        {togglingId === technician.id
-                          ? 'Updating...'
-                          : technician.availability === 'Available'
-                            ? 'Mark unavailable'
-                            : 'Mark available'}
-                      </button>
-                    </td>
+        <div className="card-body p-0">
+          {loading && technicians.length === 0 ? (
+            <LoadingState label="Loading technicians..." />
+          ) : error ? (
+            <div className="p-3"><ErrorState message={error} onRetry={load} /></div>
+          ) : technicians.length === 0 ? (
+            <EmptyState message="No technicians yet. Add one to start assigning requests." />
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-hover align-middle mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Specialization</th>
+                    <th>Availability</th>
+                    <th className="text-end">Active requests</th>
+                    <th>Added</th>
+                    <th className="actions-col">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {technicians.map((technician) => (
+                    <tr key={technician.id}>
+                      <td className="fw-semibold">{technician.name}</td>
+                      <td>{technician.email}</td>
+                      <td>{technician.specialization}</td>
+                      <td><AvailabilityBadge availability={technician.availability} /></td>
+                      <td className="text-end">{technician.active_request_count}</td>
+                      <td className="text-nowrap">{formatDate(technician.created_at)}</td>
+                      <td className="actions-col">
+                        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setEditing(technician)}>
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline-primary btn-sm"
+                          onClick={() => toggleAvailability(technician)}
+                          disabled={togglingId === technician.id}
+                        >
+                          {togglingId === technician.id
+                            ? 'Updating...'
+                            : technician.availability === 'Available'
+                              ? 'Mark unavailable'
+                              : 'Mark available'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </section>
 
       {adding && <TechnicianModal onClose={() => setAdding(false)} onSaved={handleSaved} />}

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Sidebar from './components/Sidebar.jsx'
 import Topbar from './components/Topbar.jsx'
 import Toast from './components/Toast.jsx'
@@ -7,67 +8,39 @@ import RequestsPage from './pages/RequestsPage.jsx'
 import SubmitRequestPage from './pages/SubmitRequestPage.jsx'
 import TechniciansPage from './pages/TechniciansPage.jsx'
 
-export const PAGES = {
-  dashboard: { label: 'Dashboard', title: 'Dashboard', subtitle: 'Live maintenance overview' },
-  requests: { label: 'Maintenance Requests', title: 'Maintenance Requests', subtitle: 'Review, assign and resolve office issues' },
-  submit: { label: 'Submit Request', title: 'Submit Maintenance Request', subtitle: 'Report an office issue to the facilities team' },
-  technicians: { label: 'Technicians', title: 'Technicians', subtitle: 'Manage maintenance staff and availability' },
-}
-
-function currentPageFromHash() {
-  const key = window.location.hash.replace(/^#\/?/, '')
-  return PAGES[key] ? key : 'dashboard'
-}
+export const PAGES = [
+  { path: '/', label: 'Dashboard', title: 'Dashboard', subtitle: 'Live maintenance overview', icon: 'bi-speedometer2' },
+  { path: '/requests', label: 'Maintenance Requests', title: 'Maintenance Requests', subtitle: 'Review, assign and resolve office issues', icon: 'bi-clipboard-check' },
+  { path: '/submit', label: 'Submit Request', title: 'Submit Maintenance Request', subtitle: 'Report an office issue to the facilities team', icon: 'bi-plus-circle' },
+  { path: '/technicians', label: 'Technicians', title: 'Technicians', subtitle: 'Manage maintenance staff and availability', icon: 'bi-people' },
+]
 
 export default function App() {
-  const [page, setPage] = useState(currentPageFromHash)
+  const location = useLocation()
   const [navOpen, setNavOpen] = useState(false)
   const [toast, setToast] = useState(null)
 
-  useEffect(() => {
-    const onHashChange = () => {
-      setPage(currentPageFromHash())
-      setNavOpen(false)
-    }
-    window.addEventListener('hashchange', onHashChange)
-    return () => window.removeEventListener('hashchange', onHashChange)
-  }, [])
+  const current = PAGES.find((page) => page.path === location.pathname) || PAGES[0]
 
   const notify = useCallback((message, type = 'success') => {
     setToast({ id: Date.now(), message, type })
   }, [])
-
   const dismissToast = useCallback(() => setToast(null), [])
-
-  const navigate = useCallback((key) => {
-    window.location.hash = `/${key}`
-  }, [])
-
-  const current = PAGES[page]
-
-  let content
-  if (page === 'dashboard') content = <DashboardPage onNavigate={navigate} />
-  else if (page === 'requests') content = <RequestsPage onNotify={notify} />
-  else if (page === 'submit') content = <SubmitRequestPage onNotify={notify} onNavigate={navigate} />
-  else content = <TechniciansPage onNotify={notify} />
 
   return (
     <div className="app-shell">
-      <Sidebar
-        activePage={page}
-        open={navOpen}
-        onNavigate={navigate}
-        onClose={() => setNavOpen(false)}
-      />
+      <Sidebar pages={PAGES} open={navOpen} onClose={() => setNavOpen(false)} />
       {navOpen && <div className="sidebar-backdrop" onClick={() => setNavOpen(false)} aria-hidden="true" />}
       <div className="app-main">
-        <Topbar
-          title={current.title}
-          subtitle={current.subtitle}
-          onToggleNav={() => setNavOpen((open) => !open)}
-        />
-        <main className="page-content" key={page}>
-          {content}
+        <Topbar title={current.title} subtitle={current.subtitle} onToggleNav={() => setNavOpen((open) => !open)} />
+        <main className="page-content">
+          <Routes>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/requests" element={<RequestsPage onNotify={notify} />} />
+            <Route path="/submit" element={<SubmitRequestPage onNotify={notify} />} />
+            <Route path="/technicians" element={<TechniciansPage onNotify={notify} />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </main>
       </div>
       <Toast toast={toast} onDismiss={dismissToast} />

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { AVAILABILITIES, createTechnician, updateTechnician } from '../services/api.js'
 import { LIMITS, checkEmail, checkName, checkText } from '../services/validation.js'
-import CharCounter from './CharCounter.jsx'
+import FormField from './FormField.jsx'
 import Modal from './Modal.jsx'
 
 export default function TechnicianModal({ technician, onClose, onSaved }) {
@@ -23,11 +23,11 @@ export default function TechnicianModal({ technician, onClose, onSaved }) {
   }
 
   function validate() {
-    const next = {}
-    next.name = checkName(form.name, 'Name') || undefined
-    next.email = checkEmail(form.email) || undefined
-    next.specialization = checkText(form.specialization, 'Specialization', LIMITS.specialization) || undefined
-    return next
+    return {
+      name: checkName(form.name, 'Name') || undefined,
+      email: checkEmail(form.email) || undefined,
+      specialization: checkText(form.specialization, 'Specialization', LIMITS.specialization) || undefined,
+    }
   }
 
   async function handleSubmit(event) {
@@ -64,55 +64,54 @@ export default function TechnicianModal({ technician, onClose, onSaved }) {
     <Modal
       title={isEdit ? 'Edit technician' : 'Add technician'}
       onClose={onClose}
+      size="md"
       footer={
         <>
-          <button type="button" className="btn btn--ghost" onClick={onClose} disabled={saving}>
+          <button type="button" className="btn btn-outline-secondary" onClick={onClose} disabled={saving}>
             Cancel
           </button>
-          <button type="submit" form="technician-form" className="btn btn--primary" disabled={saving}>
+          <button type="submit" form="technician-form" className="btn btn-primary" disabled={saving}>
             {saving ? 'Saving...' : isEdit ? 'Save changes' : 'Add technician'}
           </button>
         </>
       }
     >
-      <form id="technician-form" className="form-stack" onSubmit={handleSubmit} noValidate>
-        <Field label="Full name *" error={errors.name} hint="Letters, spaces, hyphens, apostrophes and periods only." counter={form.name.length} max={LIMITS.name}>
-          <input className="input" value={form.name} maxLength={LIMITS.name} onChange={(e) => update('name', e.target.value)} />
-        </Field>
-        <Field label="Email *" error={errors.email} counter={form.email.length} max={LIMITS.email}>
-          <input className="input" type="email" value={form.email} maxLength={LIMITS.email} onChange={(e) => update('email', e.target.value)} />
-        </Field>
-        <Field label="Specialization *" error={errors.specialization} hint="Letters, numbers and . , - ( ) / & ' # only, for example HVAC/AC." counter={form.specialization.length} max={LIMITS.specialization}>
-          <input className="input" value={form.specialization} maxLength={LIMITS.specialization} onChange={(e) => update('specialization', e.target.value)} placeholder="For example: Electrical, HVAC/AC, Plumbing" />
-        </Field>
-        <Field label="Availability">
-          <select className="input" value={form.availability} onChange={(e) => update('availability', e.target.value)}>
+      <form id="technician-form" className="row g-3" onSubmit={handleSubmit} noValidate>
+        <FormField label="Full name *" error={errors.name} hint="Letters, spaces, hyphens, apostrophes and periods only." counter={form.name.length} max={LIMITS.name} full>
+          <input className={`form-control ${errors.name ? 'is-invalid' : ''}`} value={form.name} maxLength={LIMITS.name} onChange={(e) => update('name', e.target.value)} />
+        </FormField>
+        <FormField label="Email *" error={errors.email} counter={form.email.length} max={LIMITS.email} full>
+          <input className={`form-control ${errors.email ? 'is-invalid' : ''}`} type="email" value={form.email} maxLength={LIMITS.email} onChange={(e) => update('email', e.target.value)} />
+        </FormField>
+        <FormField
+          label="Specialization *"
+          error={errors.specialization}
+          hint="Letters, numbers and . , - ( ) / & ' # only, for example HVAC/AC."
+          counter={form.specialization.length}
+          max={LIMITS.specialization}
+          full
+        >
+          <input
+            className={`form-control ${errors.specialization ? 'is-invalid' : ''}`}
+            value={form.specialization}
+            maxLength={LIMITS.specialization}
+            onChange={(e) => update('specialization', e.target.value)}
+            placeholder="For example: Electrical, HVAC/AC, Plumbing"
+          />
+        </FormField>
+        <FormField label="Availability" full>
+          <select className="form-select" value={form.availability} onChange={(e) => update('availability', e.target.value)}>
             {AVAILABILITIES.map((availability) => (
               <option key={availability} value={availability}>{availability}</option>
             ))}
           </select>
-        </Field>
+        </FormField>
         {saveError && (
-          <div className="form-alert form-alert--error" role="alert">
-            {saveError}
+          <div className="col-12">
+            <div className="alert alert-danger mb-0" role="alert">{saveError}</div>
           </div>
         )}
       </form>
     </Modal>
-  )
-}
-
-function Field({ label, error, hint, counter, max, children }) {
-  return (
-    <label className="field">
-      <span className="field__label">{label}</span>
-      {children}
-      <span className="field__footer">
-        <span className="field__messages">
-          {error ? <span className="field__error">{error}</span> : hint && <span className="field__hint">{hint}</span>}
-        </span>
-        {max && <CharCounter length={counter} max={max} />}
-      </span>
-    </label>
   )
 }

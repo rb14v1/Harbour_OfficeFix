@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 
-export default function Modal({ title, onClose, children, footer, wide = false }) {
+export default function Modal({ title, onClose, children, footer, size = 'lg' }) {
   useEffect(() => {
     const onKey = (event) => {
       if (event.key === 'Escape') onClose()
@@ -14,17 +14,27 @@ export default function Modal({ title, onClose, children, footer, wide = false }
   }, [onClose])
 
   return (
-    <div className="modal-overlay" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <div className={`modal ${wide ? 'modal--wide' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
-        <header className="modal__header">
-          <h2>{title}</h2>
-          <button type="button" className="modal__close" onClick={onClose} aria-label="Close dialog">
-            ×
-          </button>
-        </header>
-        <div className="modal__body">{children}</div>
-        {footer && <footer className="modal__footer">{footer}</footer>}
+    <>
+      <div className="modal-backdrop fade show" />
+      <div
+        className="modal fade show d-block"
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+      >
+        <div className={`modal-dialog modal-dialog-scrollable modal-${size}`}>
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2 className="modal-title h5">{title}</h2>
+              <button type="button" className="btn-close" aria-label="Close dialog" onClick={onClose} />
+            </div>
+            <div className="modal-body">{children}</div>
+            {footer && <div className="modal-footer justify-content-between">{footer}</div>}
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   )
 }

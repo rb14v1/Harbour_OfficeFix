@@ -1,0 +1,13 @@
+# Keep secrets, local environments and build output out of the Docker build context.
+.git
+**/.venv
+**/node_modules
+**/dist
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.env
+**/.env.*
+!**/.env.example
+**/staticfiles
+**/*.log
