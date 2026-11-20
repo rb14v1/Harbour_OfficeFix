@@ -13,9 +13,22 @@ const API_PREFIX = '/api/v1'
 const RAW_API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 const API_BASE_URL = (RAW_API_BASE_URL === undefined ? DEFAULT_API_BASE_URL : RAW_API_BASE_URL).replace(/\/+$/, '')
 
+// Request timeout in milliseconds, read from VITE_API_TIMEOUT_MS (Vite only exposes VITE_-prefixed variables).
+const DEFAULT_API_TIMEOUT_MS = 15000
+function readApiTimeoutMs() {
+  const raw = import.meta.env.VITE_API_TIMEOUT_MS
+  if (raw === undefined || String(raw).trim() === '') return DEFAULT_API_TIMEOUT_MS
+  const value = Number(raw)
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`VITE_API_TIMEOUT_MS must be a positive whole number of milliseconds (got "${raw}").`)
+  }
+  return value
+}
+const API_TIMEOUT_MS = readApiTimeoutMs()
+
 const http = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: API_TIMEOUT_MS,
   headers: { Accept: 'application/json' },
 })
 
