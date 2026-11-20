@@ -21,6 +21,19 @@ def env_list(name, default):
     return [item.strip() for item in os.environ.get(name, default).split(",") if item.strip()]
 
 
+def env_non_negative_int(name, default):
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        raise ImproperlyConfigured(f"{name} must be a whole number of seconds (got {raw!r}).")
+    if value < 0:
+        raise ImproperlyConfigured(f"{name} must be zero or greater (got {value}).")
+    return value
+
+
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
 if not SECRET_KEY:
     raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set (see backend/.env.example).")
@@ -60,6 +73,9 @@ APPEND_SLASH = False
 # Application tables live in their own PostgreSQL schema so they never collide with other tables in the same database.
 SCHEMA_PATTERN = re.compile(r"^[a-z_][a-z0-9_]*$")
 
+# Seconds a database connection is kept open for reuse (0 closes it after each request).
+DB_CONN_MAX_AGE = env_non_negative_int("DB_CONN_MAX_AGE", 60)
+
 
 def database_config():
     if TESTING:
@@ -73,7 +89,7 @@ def database_config():
     if not SCHEMA_PATTERN.match(schema) or schema == "public":
         raise ImproperlyConfigured("DJANGO_DB_SCHEMA must be a simple schema name other than 'public'.")
 
-    config = dj_database_url.parse(url, conn_max_age=60, conn_health_checks=True)
+    config = dj_database_url.parse(url, conn_max_age=DB_CONN_MAX_AGE, conn_health_checks=True)
     config["OPTIONS"] = {"options": f"-c search_path={schema}"}
     if TESTING:
         # Reuse the existing test database (created by hand). Django does not need CREATEDB rights.
